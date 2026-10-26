@@ -126,9 +126,19 @@ platform_spi_transfer_fuzz(void *user_data, const void *data_out, void *data_in,
     UNUSED(data_out);
 
     fuzz_user_data *udata = (fuzz_user_data *)user_data;
-    /* libfuzzer input might only be 2 bytes, but cnt might be 32 */
-    size_t min = cnt > udata->len ? cnt : udata->len;
+    /* libfuzzer input might only be 2 bytes, but cnt might be 32: copy
+     * the SHORTER of the two (the original max() here read out of
+     * bounds) and zero-fill whatever the input could not supply. */
+    size_t min;
+
+    if (data_in == NULL) {
+        return TSS2_RC_SUCCESS;
+    }
+    min = cnt < udata->len ? cnt : udata->len;
     memcpy(data_in, udata->fuzz_data, min);
+    if (min < cnt) {
+        memset((unsigned char *)data_in + min, 0, cnt - min);
+    }
 
     return TSS2_RC_SUCCESS;
 }
@@ -153,6 +163,11 @@ LLVMFuzzerTestOneInput(const uint8_t *fuzz_data, size_t size) {
     if (!fuzz_data) {
         return -1;
     }
+
+    /* Restart the init handshake for every iteration: is_init is static
+     * and a previous iteration left it false, which routed the next
+     * Init through the fuzz path (and into NULL query buffers). */
+    is_init = true;
 
     TSS2_TCTI_CONTEXT *tcti_ctx = NULL;
     TSS2_SYS_CONTEXT  *sapi_ctx = NULL;

@@ -51,5 +51,10 @@ test_fuzz_tcti_spi_helper_fuzz_test_CFLAGS         = $(FUZZ_CFLAGS) $(FUZZ_CFLAG
 test_fuzz_tcti_spi_helper_fuzz_test_LDADD          = $(FUZZLDADD)
 nodist_test_fuzz_tcti_spi_helper_fuzz_test_SOURCES = test/fuzz/tcti-spi-helper-fuzz-test.c
 
+# Ship the SPI-helper fuzz target with the other fuzz programs: it was
+# previously noinst-only, so the OSS-Fuzz build (make fuzz-targets) never
+# produced it.
+fuzz_PROGRAMS += test/fuzz/tcti-spi-helper-fuzz-test
+
 include Makefile-fuzz-generated.am
 endif # ENABLE_FUZZING
